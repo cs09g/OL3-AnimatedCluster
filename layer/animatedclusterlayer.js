@@ -3,6 +3,7 @@
 	released under the CeCILL-B license (http://www.cecill.info/).
 	
 	ol.layer.AnimatedCluster is a vector layer tha animate cluster 
+	link: https://github.com/Viglino/OL3-AnimatedCluster
 	
 	olx.layer.AnimatedClusterOptions: extend olx.layer.Options
 	{	animationDuration {Number} animation duration in ms, default is 700ms 
@@ -16,19 +17,23 @@
 * @param {olx.layer.AnimatedClusterOptions=} options
 * @todo 
 */
-ol.layer.AnimatedCluster = function(opt_options)
-{	var options = opt_options || {};
+ol.layer.AnimatedCluster = function(opt_options) {
+	var options = opt_options || {};
 
 	ol.layer.Vector.call (this, options);
 	
 	this.oldcluster = new ol.source.Vector();
 	this.clusters = [];
-	this.animation={start:false};
-	this.set('animationDuration', typeof(options.animationDuration)=='number' ? options.animationDuration : 700);
+	this.animation = {
+		start:false
+	};
+
+	this.set('animationDuration', typeof(options.animationDuration) == 'number' ? options.animationDuration : 700);
 	this.set('animationMethod', options.animationMethod || ol.easing.easeOut);
 
 	// Save cluster before change
 	this.getSource().on('change', this.saveCluster, this);
+
 	// Animate the cluster
 	this.on('precompose', this.animate, this);
 	this.on('postcompose', this.postanimate, this);
@@ -37,12 +42,17 @@ ol.inherits (ol.layer.AnimatedCluster, ol.layer.Vector);
 
 /** @private save cluster features before change
 */
-ol.layer.AnimatedCluster.prototype.saveCluster = function()
-{	this.oldcluster.clear();
-	if (!this.get('animationDuration')) return;
+ol.layer.AnimatedCluster.prototype.saveCluster = function() {
+	this.oldcluster.clear();
+
+	if (!this.get('animationDuration')) {
+		return;
+	}
+
 	var features = this.getSource().getFeatures();
-	if (features.length && features[0].get('features'))
-	{	this.oldcluster.addFeatures (this.clusters);
+
+	if (features.length && features[0].get('features')) {
+		this.oldcluster.addFeatures (this.clusters);
 		this.clusters = features.slice(0);
 		this.sourceChanged = true;
 	}
@@ -50,13 +60,13 @@ ol.layer.AnimatedCluster.prototype.saveCluster = function()
 
 /** @private Get the cluster that contains a feature
 */
-ol.layer.AnimatedCluster.prototype.getClusterForFeature = function(f, cluster)
-{	for (var j=0, c; c=cluster[j]; j++)
-	{	var features = cluster[j].get('features');
-		if (features && features.length) 
-		{	for (var k=0, f2; f2=features[k]; k++)
-			{	if (f===f2) 
-				{	return cluster[j];
+ol.layer.AnimatedCluster.prototype.getClusterForFeature = function(f, cluster) {
+	for (var j = 0, c; c = cluster[j]; j++) {
+		var features = cluster[j].get('features');
+		if (features && features.length) {
+			for (var k = 0, f2; f2 = features[k]; k++) {
+				if (f === f2) {
+					return cluster[j];
 				}
 			}
 		}
@@ -66,41 +76,44 @@ ol.layer.AnimatedCluster.prototype.getClusterForFeature = function(f, cluster)
 
 /** @private 
 */
-ol.layer.AnimatedCluster.prototype.stopAnimation = function()
-{	this.animation.start = false;
+ol.layer.AnimatedCluster.prototype.stopAnimation = function() {	
+	this.animation.start = false;
 	this.animation.cA = [];
 	this.animation.cB = [];
 };
 
 /** @private animate the cluster
 */
-ol.layer.AnimatedCluster.prototype.animate = function(e)
-{	var duration = this.get('animationDuration');
-	if (!duration) return;
+ol.layer.AnimatedCluster.prototype.animate = function(e) {
+	var duration = this.get('animationDuration');
+	
+	if (!duration){
+		return;
+	}
+
 	var resolution = e.frameState.viewState.resolution;
 	var a = this.animation;
 	var time = e.frameState.time;
 
 	// Start a new animation, if change resolution and source has changed
-	if (a.resolution != resolution && this.sourceChanged)
-	{	var extent = e.frameState.extent;
-		if (a.resolution < resolution)
-		{	extent = ol.extent.buffer(extent, 100*resolution);
+	if (a.resolution != resolution && this.sourceChanged) {
+		var extent = e.frameState.extent;
+		if (a.resolution < resolution) {
+			extent = ol.extent.buffer(extent, 100*resolution);
 			a.cA = this.oldcluster.getFeaturesInExtent(extent);
 			a.cB = this.getSource().getFeaturesInExtent(extent);
 			a.revers = false;
-		}
-		else
-		{	extent = ol.extent.buffer(extent, 100*resolution);
+		} else {
+			extent = ol.extent.buffer(extent, 100*resolution);
 			a.cA = this.getSource().getFeaturesInExtent(extent);
 			a.cB = this.oldcluster.getFeaturesInExtent(extent);
 			a.revers = true;
 		}
 		a.clusters = [];
-		for (var i=0, c0; c0=a.cA[i]; i++)
-		{	var f = c0.get('features');
-			if (f && f.length) 
-			{	var c = this.getClusterForFeature (f[0], a.cB);
+		for (var i = 0, c0; c0 = a.cA[i]; i++) {
+			var f = c0.get('features');
+			if (f && f.length) {
+				var c = this.getClusterForFeature (f[0], a.cB);
 				if (c) a.clusters.push({ f:c0, pt:c.getGeometry().getCoordinates() });
 			}
 		}
@@ -109,8 +122,8 @@ ol.layer.AnimatedCluster.prototype.animate = function(e)
 		this.sourceChanged = false;
 
 		// No cluster or too much to animate
-		if (!a.clusters.length || a.clusters.length>1000) 
-		{	this.stopAnimation();
+		if (!a.clusters.length || a.clusters.length>1000) {
+			this.stopAnimation();
 			return;
 		}
 		// Start animation from now
@@ -118,12 +131,12 @@ ol.layer.AnimatedCluster.prototype.animate = function(e)
 	}
 
 	// Run animation
-	if (a.start)
-	{	var vectorContext = e.vectorContext;
+	if (a.start) {
+		var vectorContext = e.vectorContext;
 		var d = (time - a.start) / duration;
 		// Animation ends
-		if (d > 1.0) 
-		{	this.stopAnimation();
+		if (d > 1.0) {
+			this.stopAnimation();
 			d = 1;
 		}
 		d = this.get('animationMethod')(d);
@@ -135,38 +148,38 @@ ol.layer.AnimatedCluster.prototype.animate = function(e)
 		e.context.globalAlpha = this.getOpacity();
 		// Retina device
 		var ratio = e.frameState.pixelRatio;
-		for (var i=0, c; c=a.clusters[i]; i++)
-		{	var pt = c.f.getGeometry().getCoordinates();
-			if (a.revers)
-			{	pt[0] = c.pt[0] + d * (pt[0]-c.pt[0]);
+		for (var i = 0, c; c = a.clusters[i]; i++) {
+			var pt = c.f.getGeometry().getCoordinates();
+			if (a.revers) {
+				pt[0] = c.pt[0] + d * (pt[0]-c.pt[0]);
 				pt[1] = c.pt[1] + d * (pt[1]-c.pt[1]);
-			}
-			else
-			{	pt[0] = pt[0] + d * (c.pt[0]-pt[0]);
+			} else {
+				pt[0] = pt[0] + d * (c.pt[0]-pt[0]);
 				pt[1] = pt[1] + d * (c.pt[1]-pt[1]);
 			}
 			// Draw feature
 			var st = stylefn(c.f, resolution);
 			/* Preserve pixel ration on retina */
 			var geo = new ol.geom.Point(pt);
-			for (var k=0; s=st[k]; k++)
-			{	var imgs = s.getImage();
+			for (var k = 0; s = st[k]; k++) {
+				var imgs = s.getImage();
 				var sc;
-				if (imgs)
-				{	sc = imgs.getScale(); 
+				
+				if (imgs) {
+					sc = imgs.getScale(); 
 					imgs.setScale(sc*ratio); // setImageStyle don't check retina
 				}
+
 				// OL3 > v3.14
-				if (vectorContext.setStyle)
-				{	vectorContext.setStyle(s);
+				if (vectorContext.setStyle) {
+					vectorContext.setStyle(s);
 					vectorContext.drawGeometry(geo);
-				}
-				// older version
-				else
-				{	vectorContext.setImageStyle(imgs);
+				} else { // older version
+					vectorContext.setImageStyle(imgs);
 					vectorContext.setTextStyle(s.getText());
 					vectorContext.drawPointGeometry(geo);
 				}
+
 				if (imgs) imgs.setScale(sc);
 			}
 			/*/
@@ -197,9 +210,9 @@ ol.layer.AnimatedCluster.prototype.animate = function(e)
 
 /** @private remove clipping after the layer is drawn
 */
-ol.layer.AnimatedCluster.prototype.postanimate = function(e)
-{	if (this.clip_)
-	{	e.context.restore();
+ol.layer.AnimatedCluster.prototype.postanimate = function(e) {	
+	if (this.clip_) {
+		e.context.restore();
 		this.clip_ = false;
 	}
 };
