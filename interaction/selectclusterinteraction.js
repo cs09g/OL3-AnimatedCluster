@@ -100,7 +100,7 @@ ol.interaction.SelectCluster.prototype.setMap = function(map)
 {	ol.interaction.Select.prototype.setMap.call (this, map);
 	var self = this;
 
-	if (this.map_ && this.map_.getView()) 
+	if (map && this.map_ && this.map_.getView()) 
 	{	map.getView().un('change:resolution', this.clear, this);
 	}
 	if (this.map_) this.map_.removeLayer(this.overlayLayer_);
